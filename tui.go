@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -53,14 +54,6 @@ type appliedMsg struct {
 	err     error
 }
 
-var (
-	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
-	okStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
-	warnStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	errStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	dimStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-)
-
 func initialModel() model {
 	return model{screen: screenLoading}
 }
@@ -76,7 +69,11 @@ func loadInstallationsCmd() tea.Msg {
 	}
 
 	installations, err := discoverInstallations(root)
-	return installationsLoadedMsg{root: root, installations: installations, err: err}
+	return installationsLoadedMsg{
+		root:          root,
+		installations: installations,
+		err:           err,
+	}
 }
 
 func buildPlanCmd(game GameInstallation) tea.Cmd {
@@ -106,13 +103,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 			return m, nil
 		}
+
 		m.root = msg.root
 		m.installations = msg.installations
 		if len(m.installations) == 0 {
 			m.screen = screenError
-			m.err = fmt.Errorf("aucun dossier players ou playersBeta contenant des fichiers .txt/.txt0/.txt1 n'a été trouvé dans %q", m.root)
+			m.err = fmt.Errorf(
+				"aucun dossier players ou playersBeta contenant des fichiers .txt/.txt0/.txt1 n'a été trouvé dans %q",
+				m.root,
+			)
 			return m, nil
 		}
+
 		m.screen = screenGameSelection
 		return m, nil
 
@@ -122,6 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 			return m, nil
 		}
+
 		m.plan = msg.plan
 		m.screen = screenPreview
 		return m, nil
@@ -132,6 +135,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 			return m, nil
 		}
+
 		m.backups = msg.backups
 		m.screen = screenResult
 		return m, nil
@@ -151,14 +155,17 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
 			}
+
 		case "down", "j":
 			if m.cursor < len(m.installations)-1 {
 				m.cursor++
 			}
+
 		case "enter":
 			m.selectedGame = m.installations[m.cursor]
 			return m, buildPlanCmd(m.selectedGame)
@@ -168,13 +175,16 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+
 		case "esc", "b":
 			m.screen = screenGameSelection
+
 		case "enter", "y":
 			if !m.plan.HasChanges() {
 				m.screen = screenResult
 				return m, nil
 			}
+
 			m.screen = screenConfirm
 		}
 
@@ -182,9 +192,11 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+
 		case "n", "esc", "b":
 			m.screen = screenPreview
-		case "y":
+
+		case "y", "enter":
 			m.screen = screenApplying
 			return m, applyPlanCmd(m.plan)
 		}
@@ -202,92 +214,297 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	switch m.screen {
 	case screenLoading:
-		return "\n  Détection des configurations Call of Duty…\n"
+		return m.viewLoading()
+
 	case screenGameSelection:
 		return m.viewGameSelection()
+
 	case screenPreview:
 		return m.viewPreview()
+
 	case screenConfirm:
 		return m.viewConfirmation()
+
 	case screenApplying:
-		return "\n  Création des backups et application atomique des modifications…\n"
+		return m.viewApplying()
+
 	case screenResult:
 		return m.viewResult()
+
 	case screenError:
-		return "\n  " + errStyle.Render("Erreur : "+m.err.Error()) + "\n\n  Entrée pour quitter.\n"
+		return m.viewError()
+
 	default:
 		return ""
 	}
 }
 
-func (m model) viewGameSelection() string {
-	var builder strings.Builder
-	builder.WriteString("\n  " + titleStyle.Render("Call of Duty Settings Patcher") + "\n\n")
-	builder.WriteString("  Racine détectée : " + dimStyle.Render(m.root) + "\n\n")
-	builder.WriteString("  Sélectionnez une installation :\n\n")
+func (m model) viewLoading() string {
+	content := renderStatus(
+		"●",
+		"Détection des configurations Call of Duty…",
+		selectedStyle,
+	)
 
-	for i, game := range m.installations {
-		cursor := "  "
-		if i == m.cursor {
-			cursor = "> "
+	return "\n" + renderPanel(activePanelStyle, "Initialisation", content) + "\n"
+}
+
+func (m model) viewGameSelection() string {
+	var items []string
+	pathWidth := max(24, m.width-12)
+
+	for index, game := range m.installations {
+		prefix := "  "
+		nameStyle := valueStyle
+
+		if index == m.cursor {
+			prefix = "▶ "
+			nameStyle = selectedStyle
 		}
-		_, _ = fmt.Fprintf(&builder, "  %s%s %s\n", cursor, game.Name, dimStyle.Render("["+game.Variant+"]"))
-		builder.WriteString("      " + dimStyle.Render(game.PlayersDir) + "\n")
-		_, _ = fmt.Fprintf(&builder, "      %d fichier(s) de configuration détecté(s)\n", len(game.Files))
+
+		item := strings.Builder{}
+		item.WriteString(prefix)
+		item.WriteString(nameStyle.Render(game.Name))
+		item.WriteString(" ")
+		item.WriteString(dimStyle.Render("[" + game.Variant + "]"))
+		item.WriteString("\n    ")
+		item.WriteString(dimStyle.Render(truncateMiddle(game.PlayersDir, pathWidth)))
+		item.WriteString("\n    ")
+		item.WriteString(
+			dimStyle.Render(
+				strconv.Itoa(len(game.Files)) + " fichier(s) de configuration détecté(s)",
+			),
+		)
+
+		if index == m.cursor {
+			items = append(items, activePanelStyle.Render(item.String()))
+			continue
+		}
+
+		items = append(items, panelStyle.Render(item.String()))
 	}
 
-	builder.WriteString("\n  " + dimStyle.Render("↑/↓ ou j/k : naviguer • Entrée : analyser • q : quitter") + "\n")
-	return builder.String()
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		labelStyle.Render("Racine détectée"),
+		valueStyle.Render(truncateMiddle(m.root, max(24, m.width-8))),
+		"",
+		strings.Join(items, "\n"),
+	)
+
+	return "\n" +
+		renderHeader(m.width, screenGameSelection) +
+		"\n\n" +
+		renderPanel(activePanelStyle, "Sélectionnez une installation", content) +
+		"\n" +
+		renderFooter("↑/↓ ou j/k : naviguer • Entrée : analyser • q : quitter") +
+		"\n"
 }
 
 func (m model) viewPreview() string {
-	var builder strings.Builder
-	builder.WriteString("\n  " + titleStyle.Render("Aperçu des modifications") + "\n\n")
-	builder.WriteString("  Jeu : " + m.plan.Game.Name + " " + dimStyle.Render("["+m.plan.Game.Variant+"]") + "\n")
-	builder.WriteString("  Dossier : " + dimStyle.Render(m.plan.Game.PlayersDir) + "\n\n")
+	pathWidth := max(24, m.width-16)
 
+	summary := lipgloss.JoinVertical(
+		lipgloss.Left,
+		labelStyle.Render("Jeu"),
+		valueStyle.Render(m.plan.Game.Name+" ["+m.plan.Game.Variant+"]"),
+		"",
+		labelStyle.Render("Dossier"),
+		valueStyle.Render(truncateMiddle(m.plan.Game.PlayersDir, pathWidth)),
+	)
+
+	var body string
 	if !m.plan.HasChanges() {
-		builder.WriteString("  " + okStyle.Render("Aucune modification nécessaire : tous les settings trouvés sont déjà conformes.") + "\n")
-		builder.WriteString("\n  " + dimStyle.Render("b/Échap : retour • Entrée : terminer • q : quitter") + "\n")
-		return builder.String()
+		body = lipgloss.JoinVertical(
+			lipgloss.Left,
+			renderStatus(
+				"✓",
+				"Aucune modification nécessaire : tous les settings trouvés sont déjà conformes.",
+				okStyle,
+			),
+			"",
+			dimStyle.Render("Aucun fichier ne sera modifié."),
+		)
+
+		return "\n" +
+			renderHeader(m.width, screenPreview) +
+			"\n\n" +
+			renderPanel(panelStyle, "Configuration analysée", summary) +
+			"\n\n" +
+			renderPanel(successPanelStyle, "Résultat", body) +
+			"\n" +
+			renderFooter("b/Échap : retour • Entrée : terminer • q : quitter") +
+			"\n"
 	}
 
-	_, _ = fmt.Fprintf(&builder, "  %s\n\n", warnStyle.Render(fmt.Sprintf("%d fichier(s), %d setting(s) seront modifiés.", m.plan.ChangedFileCount(), m.plan.ChangedSettingCount())))
+	filePanels := make([]string, 0, len(m.plan.Files))
 	for _, file := range m.plan.Files {
-		builder.WriteString("  Fichier : " + filepath.Base(file.Path) + "\n")
-		builder.WriteString("    " + dimStyle.Render(file.Path) + "\n")
+		rows := make([]string, 0, len(file.Changes)+1)
+		rows = append(rows, dimStyle.Render(truncateMiddle(file.Path, pathWidth)))
+
 		for _, change := range file.Changes {
-			_, _ = fmt.Fprintf(&builder, "    L%-4d %-32s %q → %q\n", change.Line, change.Key, change.OldValue, change.NewValue)
+			line := dimStyle.Copy().Width(6).Render("L" + strconv.Itoa(change.Line))
+			key := keyStyle.Copy().Width(28).Render(change.Key)
+			oldValue := dimStyle.Render(fmt.Sprintf("%q", change.OldValue))
+			newValue := okStyle.Render(fmt.Sprintf("%q", change.NewValue))
+
+			rows = append(
+				rows,
+				lipgloss.JoinHorizontal(
+					lipgloss.Top,
+					line,
+					key,
+					oldValue,
+					dimStyle.Render(" → "),
+					newValue,
+				),
+			)
 		}
-		builder.WriteByte('\n')
+
+		filePanels = append(
+			filePanels,
+			renderPanel(
+				panelStyle,
+				"Fichier : "+filepath.Base(file.Path),
+				lipgloss.JoinVertical(lipgloss.Left, rows...),
+			),
+		)
 	}
 
-	builder.WriteString("  " + dimStyle.Render("Aucun fichier ne sera encore modifié. Entrée/y : poursuivre • b/Échap : retour • q : quitter") + "\n")
-	return builder.String()
+	changeSummary := warnStyle.Render(
+		fmt.Sprintf(
+			"%d fichier(s), %d setting(s) seront modifiés.",
+			m.plan.ChangedFileCount(),
+			m.plan.ChangedSettingCount(),
+		),
+	)
+
+	return "\n" +
+		renderHeader(m.width, screenPreview) +
+		"\n\n" +
+		renderPanel(panelStyle, "Configuration analysée", summary) +
+		"\n\n" +
+		renderPanel(warningPanelStyle, "Modifications prévues", changeSummary) +
+		"\n\n" +
+		lipgloss.JoinVertical(lipgloss.Left, filePanels...) +
+		"\n" +
+		renderFooter("Aucun fichier n'est encore modifié • Entrée/y : poursuivre • b/Échap : retour • q : quitter") +
+		"\n"
 }
 
 func (m model) viewConfirmation() string {
-	return fmt.Sprintf("\n  %s\n\n  Jeu : %s\n  Dossier : %s\n  Fichiers : %d\n  Settings : %d\n\n  Une sauvegarde datée sera créée pour chaque fichier avant écriture.\n  Confirmer l'application ? %s\n",
-		titleStyle.Render("Confirmation requise"),
-		m.plan.Game.Name,
-		dimStyle.Render(m.plan.Game.PlayersDir),
-		m.plan.ChangedFileCount(),
-		m.plan.ChangedSettingCount(),
-		warnStyle.Render("y = appliquer • n/Échap = annuler"),
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		labelStyle.Render("Jeu"),
+		valueStyle.Render(m.plan.Game.Name+" ["+m.plan.Game.Variant+"]"),
+		"",
+		labelStyle.Render("Dossier"),
+		valueStyle.Render(truncateMiddle(m.plan.Game.PlayersDir, max(24, m.width-8))),
+		"",
+		labelStyle.Render("Fichiers à modifier"),
+		valueStyle.Render(strconv.Itoa(m.plan.ChangedFileCount())),
+		"",
+		labelStyle.Render("Settings à modifier"),
+		valueStyle.Render(strconv.Itoa(m.plan.ChangedSettingCount())),
+		"",
+		renderStatus(
+			"!",
+			"Une sauvegarde datée sera créée pour chaque fichier avant écriture.",
+			warnStyle,
+		),
 	)
+
+	actions := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		okStyle.Render("[y / Entrée] Appliquer"),
+		"  ",
+		dimStyle.Render("[n / Échap] Annuler"),
+	)
+
+	return "\n" +
+		renderHeader(m.width, screenConfirm) +
+		"\n\n" +
+		renderPanel(warningPanelStyle, "Confirmation requise", content) +
+		"\n\n  " +
+		actions +
+		"\n" +
+		renderFooter("Aucune écriture n'a encore été effectuée.") +
+		"\n"
+}
+
+func (m model) viewApplying() string {
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		renderStatus("●", "Création des backups…", selectedStyle),
+		renderStatus("●", "Application atomique des modifications…", selectedStyle),
+		"",
+		dimStyle.Render("Veuillez patienter, ne fermez pas cette fenêtre."),
+	)
+
+	return "\n" +
+		renderHeader(m.width, screenApplying) +
+		"\n\n" +
+		renderPanel(activePanelStyle, "Application en cours", content) +
+		"\n"
 }
 
 func (m model) viewResult() string {
-	var builder strings.Builder
-	builder.WriteString("\n  " + okStyle.Render("Modifications appliquées avec succès.") + "\n\n")
+	var content strings.Builder
+
+	content.WriteString(
+		renderStatus(
+			"✓",
+			"Modifications appliquées avec succès.",
+			okStyle,
+		),
+	)
+	content.WriteString("\n\n")
+
 	if len(m.backups) == 0 {
-		builder.WriteString("  Aucune écriture n'était nécessaire.\n")
+		content.WriteString(dimStyle.Render("Aucune écriture n'était nécessaire."))
 	} else {
-		builder.WriteString("  Backups créés :\n")
+		content.WriteString(labelStyle.Render("Backups créés"))
+		content.WriteString("\n")
+
 		for _, backup := range m.backups {
-			builder.WriteString("    " + dimStyle.Render(backup) + "\n")
+			content.WriteString("  ")
+			content.WriteString(dimStyle.Render(truncateMiddle(backup, max(24, m.width-10))))
+			content.WriteString("\n")
 		}
 	}
-	builder.WriteString("\n  " + dimStyle.Render("Entrée pour quitter.") + "\n")
-	return builder.String()
+
+	content.WriteString("\n")
+	content.WriteString(
+		dimStyle.Render(
+			"Vous pouvez démarrer le jeu et vérifier le comportement en partie.",
+		),
+	)
+
+	return "\n" +
+		renderHeader(m.width, screenResult) +
+		"\n\n" +
+		renderPanel(successPanelStyle, "Terminé", content.String()) +
+		"\n" +
+		renderFooter("Entrée, Échap ou q : quitter") +
+		"\n"
+}
+
+func (m model) viewError() string {
+	message := "Une erreur inconnue est survenue."
+	if m.err != nil {
+		message = m.err.Error()
+	}
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		renderStatus("✗", message, errStyle),
+		"",
+		dimStyle.Render("Aucun changement supplémentaire ne sera appliqué."),
+	)
+
+	return "\n" +
+		renderPanel(errorPanelStyle, "Erreur", content) +
+		"\n" +
+		renderFooter("Entrée, Échap ou q : quitter") +
+		"\n"
 }
