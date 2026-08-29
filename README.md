@@ -1,139 +1,40 @@
 # Call of Duty Settings Patcher
 
-Application Windows en Go avec interface terminal **Bubble Tea** pour détecter des fichiers de configuration Call of Duty et appliquer un ensemble de réglages de manière contrôlée.
+Un outil Windows en terminal pour appliquer facilement des réglages Call of Duty sélectionnés à vos fichiers de configuration.
 
-## Garanties
+L’application détecte vos configurations, affiche les changements avant application et crée une sauvegarde automatique de chaque fichier modifié.
 
-- Détection sous `%LOCALAPPDATA%\\Activision\\Call of Duty`.
-- Prise en charge des dossiers `players` (jeu complet) et `playersBeta` (bêta).
-- Détection des fichiers `.txt`, `.txt0` et `.txt1` dans ces dossiers.
-- Sélection explicite de l'installation dans la TUI.
-- Aperçu obligatoire du jeu, du dossier, des fichiers et de chaque changement `ancienne valeur → nouvelle valeur`.
-- Confirmation explicite (`y`) avant toute écriture.
-- Backup unique et horodaté de chaque fichier modifié : `fichier.backup-YYYYMMDD-HHMMSS.nanosecondes`.
-- Vérification que le fichier n'a pas été modifié entre l'aperçu et la confirmation.
-- Écriture atomique dans le même répertoire, avec vérification après écriture.
-- Tentative de rollback depuis les backups si une écriture multi-fichiers échoue.
-- Préservation byte à byte des commentaires `//`, des espaces et tabulations de fin, et des fins de lignes `LF`, `CRLF` ou `CR`.
+## Télécharger
 
-## RendererWorkerCount
-
-`RendererWorkerCount@` est calculé au lancement à partir de la topologie CPU Windows, sans utiliser le nombre de threads logiques :
-
-1. Le programme interroge la topologie CPU Windows.
-2. Lorsque des P-cores sont détectés, leur nombre est utilisé.
-3. Sinon, il utilise le nombre de cores physiques.
-4. La valeur appliquée est `ceil(80 % du nombre de cores retenus)` et ne dépasse jamais `nombre_de_cores - 1`.
-
-Exemples :
-
-| Cores utilisés | Calcul | `RendererWorkerCount` |
-|---:|---:|---:|
-| 12 cores physiques | `ceil(12 × 0,80)` | `10` |
-| 8 P-cores | `ceil(8 × 0,80)`, plafonné à `8 - 1` | `7` |
-| 6 cores physiques | `ceil(6 × 0,80)` | `5` |
-| 20 P-cores | `ceil(20 × 0,80)` | `16` |
-
-Le récapitulatif TUI affiche la valeur effectivement planifiée. Les processeurs sans cœurs hybrides utilisent automatiquement le fallback sur les cœurs physiques ; les cœurs logiques/SMT/Hyper-Threading ne sont jamais pris en compte.
-
-## Settings appliqués
-
-| Clé | Valeur |
-|---|---|
-| `NvidiaReflex@` | `Enabled` |
-| `BloodLimit@` | `true` |
-| `BloodLimitInterval@` | `2000` |
-| `ShowBlood@` | `false` |
-| `ShowBrass@` | `false` |
-| `CorpseLimit@` | `0` |
-| `GPUUploadHeaps@` | `false` |
-| `PersistentDamageLayer@` | `false` |
-| `SubdivisionLevel@` | `0` |
-| `Tessellation@` | `0_Off` |
-| `TerrainQuality@` | `Very Low` |
-| `ShaderQuality@` | `Low` |
-| `ModelQuality@` | `Low Quality` |
-| `ParticleQuality@` | `very low` |
-| `ShadowQuality@` | `Very_Low` |
-| `VolumetricQuality@` | `QUALITY_LOW` |
-| `AmbientLightingQuality@` | `Off` |
-| `ScreenSpaceShadowQuality@` | `Off` |
-| `SSRQuality@` | `Off` |
-| `ReflectionProbeRelighting@` | `1` |
-| `WorldStreamingQuality@` | `Low` |
-| `WaterCausticsMode@` | `Off` |
-| `WaterWaveWetness@` | `false` |
-| `WeatherGridVolumesQuality@` | `Off` |
-| `StaticSunshadowClipmapResolution@` | `0` |
-| `DepthOfField@` | `false` |
-| `DepthOfFieldQuality@` | `Low` |
-| `EnableVelocityBasedBlur@` | `false` |
-| `BulletImpacts@` | `false` |
-| `CorpsesCullingThreshold@` | `0.500000` |
-| `SkipIntro@` | `true` |
-| `SkipSeasonIntroVideo@` | `true` |
-| `SkipSeasonVideo@` | `true` |
-| `ViewedSplashScreen@` | `true` |
-| `RendererWorkerCount@` | `ceil(80 % des P-cores, ou des cores physiques), max cores - 1` |
-
-Les parties variables après `@` sont préservées. Exemple :
-
-```text
-RendererWorkerCount@a1b2c3 = 12   // configuration CPU
-```
-
-est modifié, sur un processeur de 12 cores physiques, en :
-
-```text
-RendererWorkerCount@a1b2c3 = 10   // configuration CPU
-```
-
-## Prérequis
-
-- Go 1.26 ou plus récent.
-- Windows avec `%LOCALAPPDATA%` défini.
-- Le jeu doit être fermé pendant l'application des changements.
-
-## Construire et lancer
-
-```powershell
-go mod download
-go test -race ./...
-go vet ./...
-go build -trimpath -ldflags="-s -w" -o cod-settings-patcher.exe .
-.\cod-settings-patcher.exe
-```
-
-Ou avec mise pour produire un exécutable Windows AMD64 depuis macOS, Linux ou Windows :
-
-```bash
-mise run build-windows-amd64
-```
+Téléchargez la dernière archive Windows depuis la page [Releases](../../releases), extrayez-la dans le dossier de votre choix, puis lancez `cod-settings-patcher.exe`.
 
 ## Utilisation
 
-1. Lancez l'exécutable dans un terminal Windows.
-2. Sélectionnez l'installation détectée avec `↑`/`↓` ou `j`/`k`.
-3. Appuyez sur `Entrée` pour calculer l'aperçu.
-4. Vérifiez le dossier, les fichiers et toutes les transitions de valeurs.
-5. Appuyez sur `Entrée` ou `y` pour accéder à la confirmation.
-6. Appuyez sur `y` pour créer les backups et appliquer les changements.
+1. **Fermez Call of Duty** avant de lancer l’outil.
+2. Ouvrez un terminal dans le dossier contenant l’exécutable.
+3. Lancez :
 
-La touche `n`, `b` ou `Échap` annule/revient en arrière selon l'écran. `q` quitte l'application.
+   ```powershell
+   .\cod-settings-patcher.exe
+   ```
 
-## Validation qualité
+4. Sélectionnez l’installation détectée avec `↑`/`↓` ou `j`/`k`.
+5. Appuyez sur `Entrée` pour voir les changements proposés.
+6. Vérifiez le jeu, le dossier, les fichiers et les valeurs qui vont changer.
+7. Confirmez avec `y` pour appliquer les changements, ou annulez avec `n`/`Échap`.
 
-```powershell
-gofmt -w .
-go vet ./...
-go test -race -count=1 ./...
-golangci-lint run --timeout=3m
-```
+L’outil ne crée pas de nouveaux réglages : il modifie uniquement les clés déjà présentes dans vos fichiers de configuration.
 
-`golangci-lint` est configuré dans `.golangci.yml` et exécuté dans GitHub Actions.
+## Sauvegardes
 
-## Limites actuelles
+Avant toute modification, une copie horodatée de chaque fichier est créée à côté du fichier d’origine. En cas de souci, restaurez simplement le fichier `.backup-...` correspondant.
 
-- L'outil ne détecte que les fichiers présents directement dans `players` ou `playersBeta`.
-- Tous les fichiers avec extension `.txt`, `.txt0` ou `.txt1` de ces dossiers sont analysés ; seuls les settings listés ci-dessus peuvent être modifiés.
-- Les règles de mapping sont compilées dans `settings.go` et ne sont pas encore configurables par fichier externe.
+## Avertissement SmartScreen
+
+Windows peut afficher un avertissement **Microsoft Defender SmartScreen** pour un exécutable téléchargé depuis Internet qui n’est pas signé ou n’a pas encore acquis de réputation.
+
+Ne contournez cet avertissement que si vous avez téléchargé l’archive depuis la page [Releases](../../releases) officielle de ce dépôt et, idéalement, vérifié son checksum SHA-256 via `checksums.txt`.
+
+## Documentation avancée
+
+Pour la liste complète des réglages, le détail de `RendererWorkerCount`, les sauvegardes, la compilation et les vérifications techniques, consultez [ADVANCED.md](ADVANCED.md).
