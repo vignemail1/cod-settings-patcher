@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -66,29 +67,47 @@ func TestRendererWorkerCount(t *testing.T) {
 		coreCount int
 		want      int
 	}{
-		{name: "twelve physical cores", coreCount: 12, want: 10},
-		{name: "eight physical cores", coreCount: 8, want: 6},
+		{name: "two cores reserve one", coreCount: 2, want: 1},
+		{name: "four cores capped at cores minus one", coreCount: 4, want: 3},
 		{name: "six physical cores", coreCount: 6, want: 5},
-		{name: "twenty performance cores", coreCount: 20, want: 16},
-		{name: "one physical core", coreCount: 1, want: 1},
+		{name: "eight P-cores", coreCount: 8, want: 7},
+		{name: "twelve physical cores", coreCount: 12, want: 10},
+		{name: "twenty P-cores", coreCount: 20, want: 16},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := rendererWorkerCount(test.coreCount)
 			if err != nil {
-				t.Fatalf("rendererWorkerCount(%d) a retourné une erreur : %v", test.coreCount, err)
+				t.Fatalf(
+					"rendererWorkerCount(%d) a retourné une erreur : %v",
+					test.coreCount,
+					err,
+				)
 			}
+
 			if got != test.want {
-				t.Fatalf("rendererWorkerCount(%d) = %d, want %d", test.coreCount, got, test.want)
+				t.Fatalf(
+					"rendererWorkerCount(%d) = %d, want %d",
+					test.coreCount,
+					got,
+					test.want,
+				)
 			}
 		})
 	}
 }
 
-func TestRendererWorkerCountRejectsInvalidCoreCount(t *testing.T) {
-	if _, err := rendererWorkerCount(0); err == nil {
-		t.Fatal("rendererWorkerCount(0) devait retourner une erreur")
+func TestRendererWorkerCountRejectsInsufficientCoreCount(t *testing.T) {
+	for _, coreCount := range []int{-1, 0, 1} {
+		t.Run(fmt.Sprintf("%d core(s)", coreCount), func(t *testing.T) {
+			if _, err := rendererWorkerCount(coreCount); err == nil {
+				t.Fatalf(
+					"rendererWorkerCount(%d) devait retourner une erreur",
+					coreCount,
+				)
+			}
+		})
 	}
 }
 

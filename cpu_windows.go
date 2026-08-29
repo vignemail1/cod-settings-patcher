@@ -185,14 +185,18 @@ func parseProcessorCoreRecords(buffer []byte) (CPUCoreInfo, error) {
 }
 
 func rendererWorkerCount(coreCount int) (int, error) {
-	if coreCount < 1 {
-		return 0, fmt.Errorf("nombre de cœurs invalide : %d", coreCount)
+	if coreCount < 2 {
+		return 0, fmt.Errorf(
+			"au moins deux cœurs physiques ou P-cores sont nécessaires : %d",
+			coreCount,
+		)
 	}
 
-	workerCount := int(math.Round(float64(coreCount) * 0.80))
-	if workerCount < 1 {
-		workerCount = 1
-	}
+	workerCount := int(math.Ceil(float64(coreCount) * 0.80))
+
+	// Ne jamais affecter tous les cœurs retenus au renderer :
+	// on laisse au minimum un P-core / cœur physique au système et au jeu.
+	workerCount = min(workerCount, coreCount-1)
 
 	return workerCount, nil
 }

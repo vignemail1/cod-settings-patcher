@@ -29,14 +29,19 @@ func detectRendererWorkerCount() (int, CPUCoreInfo, error) {
 }
 
 func rendererWorkerCount(coreCount int) (int, error) {
-	if coreCount < 1 {
-		return 0, fmt.Errorf("nombre de cœurs invalide : %d", coreCount)
+	if coreCount < 2 {
+		return 0, fmt.Errorf(
+			"au moins deux cœurs physiques ou P-cores sont nécessaires : %d",
+			coreCount,
+		)
 	}
 
-	workerCount := (coreCount*80 + 50) / 100
-	if workerCount < 1 {
-		workerCount = 1
-	}
+	// ceil(coreCount * 0.80), calculé avec des entiers :
+	// ceil(4 * coreCount / 5) == (4*coreCount + 4) / 5.
+	workerCount := (4*coreCount + 4) / 5
+
+	// Conserver systématiquement un cœur disponible.
+	workerCount = min(workerCount, coreCount-1)
 
 	return workerCount, nil
 }
