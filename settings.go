@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 var desiredValues = map[string]string{
@@ -23,8 +24,9 @@ var desiredValues = map[string]string{
 	"CorpsesCullingThreshold@":   "0.500000",
 	"TerrainQuality@":            "Very Low",
 	"Tesselation@":               "0_Off",
-	"RendererWorkerCount@":       "10",
 }
+
+const rendererWorkerCountKey = "RendererWorkerCount@"
 
 type SettingChange struct {
 	Key      string
@@ -41,8 +43,10 @@ type FileChangePlan struct {
 }
 
 type ChangePlan struct {
-	Game  GameInstallation
-	Files []FileChangePlan
+	Game                GameInstallation
+	Files               []FileChangePlan
+	RendererWorkerCount int
+	CPU                 CPUCoreInfo
 }
 
 func (p ChangePlan) HasChanges() bool {
@@ -62,7 +66,22 @@ func (p ChangePlan) ChangedSettingCount() int {
 }
 
 func buildPlan(game GameInstallation) (ChangePlan, error) {
-	plan := ChangePlan{Game: game}
+	workerCount, cpu, err := detectRendererWorkerCount()
+	if err != nil {
+		return ChangePlan{}, err
+	}
+
+	values := make(map[string]string, len(desiredValues)+1)
+	for key, value := range desiredValues {
+		values[key] = value
+	}
+	values[rendererWorkerCountKey] = strconv.Itoa(workerCount)
+
+	plan := ChangePlan{
+		Game:                game,
+		RendererWorkerCount: workerCount,
+		CPU:                 cpu,
+	}
 
 	for _, path := range game.Files {
 		original, err := os.ReadFile(path)
@@ -70,7 +89,7 @@ func buildPlan(game GameInstallation) (ChangePlan, error) {
 			return ChangePlan{}, fmt.Errorf("lecture de %q : %w", path, err)
 		}
 
-		updated, changes := applyRules(original)
+		updated, changes := applyRules(original, values)
 		if len(changes) == 0 {
 			continue
 		}
@@ -86,7 +105,7 @@ func buildPlan(game GameInstallation) (ChangePlan, error) {
 	return plan, nil
 }
 
-func applyRules(data []byte) ([]byte, []SettingChange) {
+func applyRules(data []byte, values map[string]string) ([]byte, []SettingChange) {
 	var output bytes.Buffer
 	output.Grow(len(data))
 
@@ -95,7 +114,7 @@ func applyRules(data []byte) ([]byte, []SettingChange) {
 
 	for len(data) > 0 {
 		line, eol, remaining := splitPhysicalLine(data)
-		updatedLine, changed, change := updateLineWithChange(line, lineNumber)
+		updatedLine, changed, change := updateLineWithChange(line, lineNumber, values)
 		if changed {
 			changes = append(changes, change)
 		}
@@ -127,7 +146,7 @@ func splitPhysicalLine(data []byte) (line, eol, rest []byte) {
 	return data, nil, nil
 }
 
-func updateLineWithChange(line []byte, lineNumber int) ([]byte, bool, SettingChange) {
+func updateLineWithChange(line []byte, lineNumber int, values map[string]string) ([]byte, bool, SettingChange) {
 	if isCommentOnlyLine(line) {
 		return line, false, SettingChange{}
 	}
@@ -143,7 +162,7 @@ func updateLineWithChange(line []byte, lineNumber int) ([]byte, bool, SettingCha
 	}
 
 	key := string(keyBytes)
-	newValue, managed := desiredValues[key]
+	newValue, managed := values[key]
 	if !managed {
 		return line, false, SettingChange{}
 	}

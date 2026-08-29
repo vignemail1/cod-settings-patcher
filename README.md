@@ -16,6 +16,26 @@ Application Windows en Go avec interface terminal **Bubble Tea** pour détecter 
 - Tentative de rollback depuis les backups si une écriture multi-fichiers échoue.
 - Préservation byte à byte des commentaires `//`, des espaces et tabulations de fin, et des fins de lignes `LF`, `CRLF` ou `CR`.
 
+## RendererWorkerCount
+
+`RendererWorkerCount@` est calculé au lancement à partir de la topologie CPU Windows, sans utiliser le nombre de threads logiques :
+
+1. Le programme interroge PowerShell/CIM (`Win32_Processor`).
+2. Lorsque Windows expose `NumberOfPerformanceCores`, ce nombre de P-cores est utilisé.
+3. Sinon, il utilise `NumberOfCores`, le nombre de cores physiques.
+4. La valeur appliquée est l'arrondi mathématique de `80 %` de ce nombre, avec un minimum de `1`.
+
+Exemples :
+
+| Cores utilisés | Calcul | `RendererWorkerCount` |
+|---:|---:|---:|
+| 12 cores physiques | `round(12 × 0,80)` | `10` |
+| 8 P-cores | `round(8 × 0,80)` | `6` |
+| 6 cores physiques | `round(6 × 0,80)` | `5` |
+| 20 P-cores | `round(20 × 0,80)` | `16` |
+
+Le récapitulatif TUI affiche la valeur effectivement planifiée. Les processeurs sans cœurs hybrides utilisent automatiquement le fallback `NumberOfCores` ; les cœurs logiques/SMT/Hyper-Threading ne sont jamais pris en compte.
+
 ## Settings appliqués
 
 | Clé | Valeur |
@@ -32,11 +52,14 @@ Application Windows en Go avec interface terminal **Bubble Tea** pour détecter 
 | `WaterCausticMode@` | `Off` |
 | `WaterWaveWetness@` | `false` |
 | `WeatherGridVolumesQuality@` | `Off` |
+| `WaterCausticMode@` | `Off` |
+| `WaterWaveWetness@` | `false` |
+| `WeatherGridVolumesQuality@` | `Off` |
 | `BulletImpacts@` | `false` |
 | `CorpsesCullingThreshold@` | `0.500000` |
 | `TerrainQuality@` | `Very Low` |
 | `Tesselation@` | `0_Off` |
-| `RendererWorkerCount@` | `10` |
+| `RendererWorkerCount@` | `round(80 % des P-cores, ou des cores physiques)` |
 
 Les parties variables après `@` sont préservées. Exemple :
 
@@ -44,7 +67,7 @@ Les parties variables après `@` sont préservées. Exemple :
 RendererWorkerCount@a1b2c3 = 12   // configuration CPU
 ```
 
-est modifié en :
+est modifié, sur un processeur de 12 cores physiques, en :
 
 ```text
 RendererWorkerCount@a1b2c3 = 10   // configuration CPU
@@ -54,6 +77,7 @@ RendererWorkerCount@a1b2c3 = 10   // configuration CPU
 
 - Go 1.23 ou plus récent.
 - Windows avec `%LOCALAPPDATA%` défini.
+- PowerShell et la classe CIM `Win32_Processor` disponibles.
 - Le jeu doit être fermé pendant l'application des changements.
 
 ## Construire et lancer
