@@ -20,21 +20,21 @@ Application Windows en Go avec interface terminal **Bubble Tea** pour détecter 
 
 `RendererWorkerCount@` est calculé au lancement à partir de la topologie CPU Windows, sans utiliser le nombre de threads logiques :
 
-1. Le programme interroge PowerShell/CIM (`Win32_Processor`).
-2. Lorsque Windows expose `NumberOfPerformanceCores`, ce nombre de P-cores est utilisé.
-3. Sinon, il utilise `NumberOfCores`, le nombre de cores physiques.
-4. La valeur appliquée est l'arrondi mathématique de `80 %` de ce nombre, avec un minimum de `1`.
+1. Le programme interroge la topologie CPU Windows.
+2. Lorsque des P-cores sont détectés, leur nombre est utilisé.
+3. Sinon, il utilise le nombre de cores physiques.
+4. La valeur appliquée est `ceil(80 % du nombre de cores retenus)` et ne dépasse jamais `nombre_de_cores - 1`.
 
 Exemples :
 
 | Cores utilisés | Calcul | `RendererWorkerCount` |
 |---:|---:|---:|
-| 12 cores physiques | `round(12 × 0,80)` | `10` |
-| 8 P-cores | `round(8 × 0,80)` | `6` |
-| 6 cores physiques | `round(6 × 0,80)` | `5` |
-| 20 P-cores | `round(20 × 0,80)` | `16` |
+| 12 cores physiques | `ceil(12 × 0,80)` | `10` |
+| 8 P-cores | `ceil(8 × 0,80)`, plafonné à `8 - 1` | `7` |
+| 6 cores physiques | `ceil(6 × 0,80)` | `5` |
+| 20 P-cores | `ceil(20 × 0,80)` | `16` |
 
-Le récapitulatif TUI affiche la valeur effectivement planifiée. Les processeurs sans cœurs hybrides utilisent automatiquement le fallback `NumberOfCores` ; les cœurs logiques/SMT/Hyper-Threading ne sont jamais pris en compte.
+Le récapitulatif TUI affiche la valeur effectivement planifiée. Les processeurs sans cœurs hybrides utilisent automatiquement le fallback sur les cœurs physiques ; les cœurs logiques/SMT/Hyper-Threading ne sont jamais pris en compte.
 
 ## Settings appliqués
 
@@ -48,18 +48,33 @@ Le récapitulatif TUI affiche la valeur effectivement planifiée. Les processeur
 | `CorpseLimit@` | `0` |
 | `GPUUploadHeaps@` | `false` |
 | `PersistentDamageLayer@` | `false` |
-| `SubDivisionLevel@` | `0` |
-| `WaterCausticMode@` | `Off` |
+| `SubdivisionLevel@` | `0` |
+| `Tessellation@` | `0_Off` |
+| `TerrainQuality@` | `Very Low` |
+| `ShaderQuality@` | `Low` |
+| `ModelQuality@` | `Low Quality` |
+| `ParticleQuality@` | `very low` |
+| `ShadowQuality@` | `Very_Low` |
+| `VolumetricQuality@` | `QUALITY_LOW` |
+| `AmbientLightingQuality@` | `Off` |
+| `ScreenSpaceShadowQuality@` | `Off` |
+| `SSRQuality@` | `Off` |
+| `ReflectionProbeRelighting@` | `1` |
+| `WorldStreamingQuality@` | `Low` |
+| `WaterCausticsMode@` | `Off` |
 | `WaterWaveWetness@` | `false` |
 | `WeatherGridVolumesQuality@` | `Off` |
-| `WaterCausticMode@` | `Off` |
-| `WaterWaveWetness@` | `false` |
-| `WeatherGridVolumesQuality@` | `Off` |
+| `StaticSunshadowClipmapResolution@` | `0` |
+| `DepthOfField@` | `false` |
+| `DepthOfFieldQuality@` | `Low` |
+| `EnableVelocityBasedBlur@` | `false` |
 | `BulletImpacts@` | `false` |
 | `CorpsesCullingThreshold@` | `0.500000` |
-| `TerrainQuality@` | `Very Low` |
-| `Tesselation@` | `0_Off` |
-| `RendererWorkerCount@` | `round(80 % des P-cores, ou des cores physiques)` |
+| `SkipIntro@` | `true` |
+| `SkipSeasonIntroVideo@` | `true` |
+| `SkipSeasonVideo@` | `true` |
+| `ViewedSplashScreen@` | `true` |
+| `RendererWorkerCount@` | `ceil(80 % des P-cores, ou des cores physiques), max cores - 1` |
 
 Les parties variables après `@` sont préservées. Exemple :
 
@@ -75,9 +90,8 @@ RendererWorkerCount@a1b2c3 = 10   // configuration CPU
 
 ## Prérequis
 
-- Go 1.23 ou plus récent.
+- Go 1.26 ou plus récent.
 - Windows avec `%LOCALAPPDATA%` défini.
-- PowerShell et la classe CIM `Win32_Processor` disponibles.
 - Le jeu doit être fermé pendant l'application des changements.
 
 ## Construire et lancer
@@ -88,6 +102,12 @@ go test -race ./...
 go vet ./...
 go build -trimpath -ldflags="-s -w" -o cod-settings-patcher.exe .
 .\cod-settings-patcher.exe
+```
+
+Ou avec mise pour produire un exécutable Windows AMD64 depuis macOS, Linux ou Windows :
+
+```bash
+mise run build-windows-amd64
 ```
 
 ## Utilisation
@@ -107,6 +127,7 @@ La touche `n`, `b` ou `Échap` annule/revient en arrière selon l'écran. `q` qu
 gofmt -w .
 go vet ./...
 go test -race -count=1 ./...
+golangci-lint run --timeout=3m
 ```
 
 `golangci-lint` est configuré dans `.golangci.yml` et exécuté dans GitHub Actions.
