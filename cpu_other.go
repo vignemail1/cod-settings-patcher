@@ -7,12 +7,14 @@ import (
 	"runtime"
 )
 
-// CPUCoreInfo contient les nombres de cœurs physiques et de cœurs performance.
+// CPUCoreInfo contains the physical and performance-core counts detected on Windows.
 type CPUCoreInfo struct {
 	PhysicalCores    int
 	PerformanceCores int
 }
 
+// detectRendererWorkerCount is a development-only fallback for non-Windows hosts.
+// Windows builds use GetLogicalProcessorInformationEx in cpu_windows.go.
 func detectRendererWorkerCount() (int, CPUCoreInfo, error) {
 	coreCount := runtime.NumCPU()
 
@@ -28,12 +30,13 @@ func detectRendererWorkerCount() (int, CPUCoreInfo, error) {
 
 func rendererWorkerCount(coreCount int) (int, error) {
 	if coreCount < 1 {
-		return 0, fmt.Errorf("nombre de cores invalide : %d", coreCount)
+		return 0, fmt.Errorf("nombre de cœurs invalide : %d", coreCount)
 	}
 
-	workers := (coreCount*80 + 50) / 100
-	if workers < 1 {
-		workers = 1
+	workerCount := (coreCount*80 + 50) / 100
+	if workerCount < 1 {
+		workerCount = 1
 	}
-	return workers, nil
+
+	return workerCount, nil
 }
