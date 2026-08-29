@@ -1,0 +1,57 @@
+version: 2
+
+project_name: cod-settings-patcher
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: cod-settings-patcher
+    main: .
+    binary: cod-settings-patcher
+    goos:
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+archives:
+  - id: windows-archive
+    ids:
+      - cod-settings-patcher
+    formats:
+      - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - src: README.md
+        dst: README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github-native
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+release:
+  github:
+    owner: vignemail1
+    name: cod-settings-patcher
+  name_template: "{{ .Tag }}"
+  prerelease: auto
+  draft: false
+  replace_existing_artifacts: true
