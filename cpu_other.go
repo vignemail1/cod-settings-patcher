@@ -2,16 +2,28 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
-// CPUCoreInfo contains the physical and performance-core counts reported by Windows.
+// CPUCoreInfo contient les nombres de cœurs physiques et de cœurs performance.
 type CPUCoreInfo struct {
 	PhysicalCores    int
 	PerformanceCores int
 }
 
 func detectRendererWorkerCount() (int, CPUCoreInfo, error) {
-	return 0, CPUCoreInfo{}, fmt.Errorf("la détection des P-cores/cores physiques est uniquement prise en charge sous Windows")
+	coreCount := runtime.NumCPU()
+
+	workerCount, err := rendererWorkerCount(coreCount)
+	if err != nil {
+		return 0, CPUCoreInfo{}, err
+	}
+
+	return workerCount, CPUCoreInfo{
+		PhysicalCores: coreCount,
+	}, nil
 }
 
 func rendererWorkerCount(coreCount int) (int, error) {

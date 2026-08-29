@@ -1,6 +1,26 @@
 [tools]
 go = "1.26"
-"github:golangci/golangci-lint" = "2.1.6"
+"github:golangci/golangci-lint" = "2.13.2"
+
+[tasks.lint]
+description = "Run golangci-lint with the project toolchain"
+run = "golangci-lint run --timeout=3m"
+
+[tasks.test]
+description = "Run Go tests and static analysis"
+run = [
+  "go mod tidy",
+  "go mod verify",
+  "go vet ./...",
+  "go test -race -count=1 ./...",
+]
+
+[tasks.check-windows-amd64]
+description = "Cross-check the Windows amd64 target without CGO"
+run = [
+  "GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go vet ./...",
+  "GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/windows-amd64/cod-settings-patcher.exe .",
+]
 
 [tasks.build-windows-amd64]
 description = "Build the Windows amd64 executable"
