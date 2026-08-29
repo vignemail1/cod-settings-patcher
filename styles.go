@@ -52,16 +52,16 @@ var (
 			BorderForeground(colorBorder).
 			Padding(0, 1)
 
-	activePanelStyle = panelStyle.Copy().
+	activePanelStyle = panelStyle.
 				BorderForeground(colorPrimary)
 
-	successPanelStyle = panelStyle.Copy().
+	successPanelStyle = panelStyle.
 				BorderForeground(colorSuccess)
 
-	warningPanelStyle = panelStyle.Copy().
+	warningPanelStyle = panelStyle.
 				BorderForeground(colorWarning)
 
-	errorPanelStyle = panelStyle.Copy().
+	errorPanelStyle = panelStyle.
 			BorderForeground(colorDanger)
 
 	okStyle = lipgloss.NewStyle().
@@ -132,6 +132,7 @@ func renderHeader(width int, active screen) string {
 }
 
 func renderStepper(active screen) string {
+	currentIndex := stepIndex(active)
 	steps := []struct {
 		label  string
 		screen screen
@@ -149,11 +150,11 @@ func renderStepper(active screen) string {
 		)
 
 		switch {
-		case item.screen == active:
+		case index == currentIndex:
 			label = selectedStyle.Render(
 				"● " + string(rune('1'+index)) + " " + item.label,
 			)
-		case item.screen < active:
+		case index < currentIndex:
 			label = okStyle.Render(
 				"✓ " + string(rune('1'+index)) + " " + item.label,
 			)

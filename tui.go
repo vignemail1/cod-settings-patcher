@@ -343,8 +343,8 @@ func (m model) viewPreview() string {
 		rows = append(rows, dimStyle.Render(truncateMiddle(file.Path, pathWidth)))
 
 		for _, change := range file.Changes {
-			line := dimStyle.Copy().Width(6).Render("L" + strconv.Itoa(change.Line))
-			key := keyStyle.Copy().Width(28).Render(change.Key)
+			line := dimStyle.Width(6).Render("L" + strconv.Itoa(change.Line))
+			key := keyStyle.Width(28).Render(change.Key)
 			oldValue := dimStyle.Render(fmt.Sprintf("%q", change.OldValue))
 			newValue := okStyle.Render(fmt.Sprintf("%q", change.NewValue))
 
