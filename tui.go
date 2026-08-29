@@ -231,9 +231,9 @@ func (m model) viewGameSelection() string {
 		if i == m.cursor {
 			cursor = "> "
 		}
-		builder.WriteString(fmt.Sprintf("  %s%s %s\n", cursor, game.Name, dimStyle.Render("["+game.Variant+"]")))
+		_, _ = fmt.Fprintf(&builder, "  %s%s %s\n", cursor, game.Name, dimStyle.Render("["+game.Variant+"]"))
 		builder.WriteString("      " + dimStyle.Render(game.PlayersDir) + "\n")
-		builder.WriteString(fmt.Sprintf("      %d fichier(s) de configuration détecté(s)\n", len(game.Files)))
+		_, _ = fmt.Fprintf(&builder, "      %d fichier(s) de configuration détecté(s)\n", len(game.Files))
 	}
 
 	builder.WriteString("\n  " + dimStyle.Render("↑/↓ ou j/k : naviguer • Entrée : analyser • q : quitter") + "\n")
@@ -252,12 +252,12 @@ func (m model) viewPreview() string {
 		return builder.String()
 	}
 
-	builder.WriteString(fmt.Sprintf("  %s\n\n", warnStyle.Render(fmt.Sprintf("%d fichier(s), %d setting(s) seront modifiés.", m.plan.ChangedFileCount(), m.plan.ChangedSettingCount()))))
+	_, _ = fmt.Fprintf(&builder, "  %s\n\n", warnStyle.Render(fmt.Sprintf("%d fichier(s), %d setting(s) seront modifiés.", m.plan.ChangedFileCount(), m.plan.ChangedSettingCount())))
 	for _, file := range m.plan.Files {
 		builder.WriteString("  Fichier : " + filepath.Base(file.Path) + "\n")
 		builder.WriteString("    " + dimStyle.Render(file.Path) + "\n")
 		for _, change := range file.Changes {
-			builder.WriteString(fmt.Sprintf("    L%-4d %-32s %q → %q\n", change.Line, change.Key, change.OldValue, change.NewValue))
+			_, _ = fmt.Fprintf(&builder, "    L%-4d %-32s %q → %q\n", change.Line, change.Key, change.OldValue, change.NewValue)
 		}
 		builder.WriteByte('\n')
 	}

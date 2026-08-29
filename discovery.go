@@ -31,14 +31,45 @@ func findCODRoot() (string, error) {
 		return "", errors.New("variable d'environnement LOCALAPPDATA absente")
 	}
 
+	localAppData = filepath.Clean(localAppData)
+	if !filepath.IsAbs(localAppData) {
+		return "", fmt.Errorf(
+			"LOCALAPPDATA doit être un chemin absolu : %q",
+			localAppData,
+		)
+	}
+
 	root := filepath.Join(localAppData, "Activision", "Call of Duty")
+
+	relativeRoot, err := filepath.Rel(localAppData, root)
+	if err != nil {
+		return "", fmt.Errorf(
+			"validation du chemin Call of Duty : %w",
+			err,
+		)
+	}
+
+	if relativeRoot == ".." ||
+		strings.HasPrefix(relativeRoot, ".."+string(filepath.Separator)) ||
+		filepath.IsAbs(relativeRoot) {
+		return "", fmt.Errorf(
+			"chemin Call of Duty hors de LOCALAPPDATA : %q",
+			root,
+		)
+	}
+
 	info, err := os.Stat(root)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return "", fmt.Errorf("dossier Call of Duty introuvable : %q", root)
+			return "", fmt.Errorf(
+				"dossier Call of Duty introuvable : %q",
+				root,
+			)
 		}
+
 		return "", fmt.Errorf("stat de %q : %w", root, err)
 	}
+
 	if !info.IsDir() {
 		return "", fmt.Errorf("%q n'est pas un répertoire", root)
 	}
