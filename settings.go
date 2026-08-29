@@ -28,6 +28,7 @@ var desiredValues = map[string]string{
 
 const rendererWorkerCountKey = "RendererWorkerCount@"
 
+// SettingChange describes one value replacement planned for a settings line.
 type SettingChange struct {
 	Key      string
 	OldValue string
@@ -35,6 +36,7 @@ type SettingChange struct {
 	Line     int
 }
 
+// FileChangePlan contains the original and planned contents for one settings file.
 type FileChangePlan struct {
 	Path    string
 	Changes []SettingChange
@@ -42,6 +44,7 @@ type FileChangePlan struct {
 	After   []byte
 }
 
+// ChangePlan contains all file changes proposed for one game installation.
 type ChangePlan struct {
 	Game                GameInstallation
 	Files               []FileChangePlan
@@ -49,14 +52,17 @@ type ChangePlan struct {
 	CPU                 CPUCoreInfo
 }
 
+// HasChanges reports whether the plan contains at least one modified file.
 func (p ChangePlan) HasChanges() bool {
 	return len(p.Files) > 0
 }
 
+// ChangedFileCount returns the number of files that would be modified.
 func (p ChangePlan) ChangedFileCount() int {
 	return len(p.Files)
 }
 
+// ChangedSettingCount returns the total number of setting values that would change.
 func (p ChangePlan) ChangedSettingCount() int {
 	count := 0
 	for _, file := range p.Files {
@@ -84,7 +90,7 @@ func buildPlan(game GameInstallation) (ChangePlan, error) {
 	}
 
 	for _, path := range game.Files {
-		original, err := os.ReadFile(path)
+		original, err := os.ReadFile(path) // #nosec G304 -- path originates from a discovered Call of Duty players directory.
 		if err != nil {
 			return ChangePlan{}, fmt.Errorf("lecture de %q : %w", path, err)
 		}

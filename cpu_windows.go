@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// CPUCoreInfo contains the physical and performance-core counts reported by Windows.
 type CPUCoreInfo struct {
 	PhysicalCores    int
 	PerformanceCores int

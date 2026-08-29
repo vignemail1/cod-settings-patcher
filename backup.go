@@ -1,3 +1,4 @@
+// Package main provides a terminal application for safely patching Call of Duty settings files.
 package main
 
 import (
@@ -16,7 +17,7 @@ func applyPlan(plan ChangePlan) ([]string, error) {
 	}
 
 	for _, filePlan := range plan.Files {
-		current, err := os.ReadFile(filePlan.Path)
+		current, err := os.ReadFile(filePlan.Path) // #nosec G304 -- path originates from discovered game settings files.
 		if err != nil {
 			return nil, fmt.Errorf("relecture de %q : %w", filePlan.Path, err)
 		}
@@ -67,7 +68,7 @@ func createTimestampedBackup(source string, content []byte, mode fs.FileMode) (s
 }
 
 func writeNewFile(path string, content []byte, permissions fs.FileMode) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permissions)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permissions) // #nosec G304 -- destination is derived from a discovered settings file and cannot overwrite an existing file.
 	if err != nil {
 		return err
 	}
@@ -118,7 +119,7 @@ func atomicWrite(path string, content []byte, mode fs.FileMode) error {
 }
 
 func verifyWrittenFile(path string, expected []byte) error {
-	actual, err := os.ReadFile(path)
+	actual, err := os.ReadFile(path) // #nosec G304 -- path originates from a discovered settings file written by atomicWrite.
 	if err != nil {
 		return fmt.Errorf("vérification de %q : %w", path, err)
 	}
@@ -131,7 +132,7 @@ func verifyWrittenFile(path string, expected []byte) error {
 func rollbackApplied(files []FileChangePlan, backups []string, originalErr error) error {
 	var rollbackErrs []error
 	for i := len(files) - 1; i >= 0; i-- {
-		backupContent, err := os.ReadFile(backups[i])
+		backupContent, err := os.ReadFile(backups[i]) // #nosec G304 -- backup path was created by createTimestampedBackup in this transaction.
 		if err != nil {
 			rollbackErrs = append(rollbackErrs, fmt.Errorf("lecture du backup %q : %w", backups[i], err))
 			continue

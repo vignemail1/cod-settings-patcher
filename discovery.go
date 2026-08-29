@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// GameInstallation describes one detected Call of Duty configuration directory.
 type GameInstallation struct {
 	Name       string
 	Root       string

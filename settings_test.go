@@ -13,7 +13,6 @@ func TestApplyRulesPreservesFormattingAndCRLF(t *testing.T) {
 			"TerrainQuality@ghi = High",
 	)
 
-	values := testValues("10")
 	want := []byte(
 		"RendererWorkerCount@abc = 10   // commentaire  \r\n" +
 			"ShowBlood@def = false\t\r\n" +
@@ -21,7 +20,7 @@ func TestApplyRulesPreservesFormattingAndCRLF(t *testing.T) {
 			"TerrainQuality@ghi = Very Low",
 	)
 
-	got, changes := applyRules(input, values)
+	got, changes := applyRules(input, testValues())
 	if !bytes.Equal(got, want) {
 		t.Fatalf("contenu inattendu:\n got: %q\nwant: %q", got, want)
 	}
@@ -32,7 +31,7 @@ func TestApplyRulesPreservesFormattingAndCRLF(t *testing.T) {
 
 func TestApplyRulesIsIdempotent(t *testing.T) {
 	input := []byte("ShowBlood@x = false // ok\nTerrainQuality@y = Very Low\n")
-	got, changes := applyRules(input, testValues("10"))
+	got, changes := applyRules(input, testValues())
 	if !bytes.Equal(got, input) {
 		t.Fatalf("le contenu ne doit pas changer : got %q, want %q", got, input)
 	}
@@ -44,7 +43,7 @@ func TestApplyRulesIsIdempotent(t *testing.T) {
 func TestApplyRulesPreservesMixedEndings(t *testing.T) {
 	input := []byte("ShowBrass@x = true\r\nCorpseLimit@y = 12\nBulletImpacts@z = true\r")
 	want := []byte("ShowBrass@x = false\r\nCorpseLimit@y = 0\nBulletImpacts@z = false\r")
-	got, _ := applyRules(input, testValues("10"))
+	got, _ := applyRules(input, testValues())
 	if !bytes.Equal(got, want) {
 		t.Fatalf("fins de ligne non préservées:\n got: %q\nwant: %q", got, want)
 	}
@@ -52,7 +51,7 @@ func TestApplyRulesPreservesMixedEndings(t *testing.T) {
 
 func TestApplyRulesKeepsUnknownKeysUntouched(t *testing.T) {
 	input := []byte("UnknownSetting@x = keep me  // preserve\n")
-	got, changes := applyRules(input, testValues("10"))
+	got, changes := applyRules(input, testValues())
 	if !bytes.Equal(got, input) {
 		t.Fatalf("une clé inconnue a été modifiée : got %q, want %q", got, input)
 	}
@@ -93,11 +92,11 @@ func TestRendererWorkerCountRejectsInvalidCoreCount(t *testing.T) {
 	}
 }
 
-func testValues(rendererWorkerCount string) map[string]string {
+func testValues() map[string]string {
 	values := make(map[string]string, len(desiredValues)+1)
 	for key, value := range desiredValues {
 		values[key] = value
 	}
-	values[rendererWorkerCountKey] = rendererWorkerCount
+	values[rendererWorkerCountKey] = "10"
 	return values
 }

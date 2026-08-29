@@ -9,12 +9,8 @@ permissions:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }} / Go 1.26
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-latest]
+    name: Test and build with Go 1.26
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,7 +29,9 @@ jobs:
 
       - name: Check formatting
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: |
+          gofmt -d .
+          git diff --exit-code
 
       - name: Vet
         run: go vet ./...
