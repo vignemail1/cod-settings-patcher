@@ -1,67 +1,67 @@
-# Documentation avancée
+# Advanced Documentation
 
-Cette page regroupe les détails techniques, la liste des réglages et les instructions de développement de Call of Duty Settings Patcher.
+This page covers the technical details, settings list, and development instructions for Call of Duty Settings Patcher.
 
-## Détection des configurations
+## Configuration discovery
 
-L’outil recherche les configurations sous :
+The tool looks for configurations under:
 
 ```text
 %LOCALAPPDATA%\Activision\Call of Duty
 ```
 
-Il détecte les dossiers suivants :
+It detects the following directories:
 
-- `players` pour les installations de jeu complet ;
-- `playersBeta` pour les versions bêta.
+- `players` for full game installations;
+- `playersBeta` for beta versions.
 
-Les fichiers directement présents dans ces dossiers avec les extensions `.txt`, `.txt0` et `.txt1` sont analysés. Les fichiers de sauvegarde contenant `.backup-` dans leur nom sont ignorés.
+Files located directly in these directories with the `.txt`, `.txt0`, and `.txt1` extensions are analyzed. Backup files with `.backup-` in their names are ignored.
 
-## Sécurité des écritures
+## Write safety
 
-Avant toute écriture, l’application :
+Before writing anything, the application:
 
-1. calcule un plan de changements en mémoire ;
-2. affiche le jeu, son dossier, les fichiers et chaque transition `ancienne valeur → nouvelle valeur` ;
-3. attend une confirmation explicite avec `y` ;
-4. relit les fichiers pour vérifier qu’ils n’ont pas changé depuis l’aperçu ;
-5. crée une sauvegarde horodatée de chaque fichier ;
-6. écrit via un fichier temporaire situé dans le même répertoire, puis le remplace de manière atomique ;
-7. relit le fichier pour vérifier le contenu écrit ;
-8. tente un rollback depuis les sauvegardes si une transaction multi-fichiers échoue.
+1. builds an in-memory change plan;
+2. shows the game, its directory, the files, and every `old value → new value` transition;
+3. waits for explicit confirmation with `y`;
+4. reads the files again to ensure they have not changed since the preview;
+5. creates a timestamped backup of every file;
+6. writes through a temporary file in the same directory, then replaces the original atomically;
+7. reads the file again to verify the written content;
+8. attempts a rollback from backups if a multi-file transaction fails.
 
-Les sauvegardes sont nommées ainsi :
+Backups are named as follows:
 
 ```text
-<nom-du-fichier>.backup-YYYYMMDD-HHMMSS.nanosecondes
+<file-name>.backup-YYYYMMDD-HHMMSS.nanoseconds
 ```
 
-Le moteur travaille directement sur les octets des fichiers afin de préserver les commentaires `//`, les espaces et tabulations de fin de ligne, ainsi que les fins de ligne `LF`, `CRLF` et `CR`.
+The engine works directly on file bytes to preserve `//` comments, trailing spaces and tabs, and `LF`, `CRLF`, and `CR` line endings.
 
 ## RendererWorkerCount
 
-`RendererWorkerCount@` est calculé à partir de la topologie CPU Windows, sans utiliser les threads logiques :
+`RendererWorkerCount@` is calculated from the Windows CPU topology without using logical threads:
 
-1. la topologie Windows est interrogée pour identifier les P-cores lorsqu’ils sont disponibles ;
-2. sinon, le nombre de cœurs physiques est utilisé ;
-3. les cœurs logiques, SMT et Hyper-Threading ne sont jamais utilisés ;
-4. la valeur appliquée est `ceil(80 % du nombre de cœurs retenus)` ;
-5. elle ne dépasse jamais `nombre_de_cœurs - 1`.
+1. Windows topology is queried to identify P-cores when they are available;
+2. otherwise, the physical core count is used;
+3. logical cores, SMT, and Hyper-Threading are never used;
+4. the applied value is `ceil(80% of the selected core count)`;
+5. it never exceeds `core count - 1`.
 
-Exemples :
+Examples:
 
-| Cœurs retenus | Calcul | Valeur |
+| Selected cores | Calculation | Value |
 |---:|---:|---:|
-| 12 cœurs physiques | `ceil(12 × 0,80)` | `10` |
-| 8 P-cores | `ceil(8 × 0,80)`, maximum `8 - 1` | `7` |
-| 6 cœurs physiques | `ceil(6 × 0,80)` | `5` |
-| 20 P-cores | `ceil(20 × 0,80)` | `16` |
+| 12 physical cores | `ceil(12 × 0.80)` | `10` |
+| 8 P-cores | `ceil(8 × 0.80)`, maximum `8 - 1` | `7` |
+| 6 physical cores | `ceil(6 × 0.80)` | `5` |
+| 20 P-cores | `ceil(20 × 0.80)` | `16` |
 
-## Réglages appliqués
+## Applied settings
 
-Les clés sont recherchées sous leur forme `NomDeCle@... = valeur`. La portion après `@`, l’espacement autour de `=`, les commentaires éventuels et les fins de ligne sont conservés.
+Keys are matched in the `KeyName@... = value` form. The portion after `@`, spacing around `=`, optional comments, and line endings are preserved.
 
-| Clé | Valeur appliquée |
+| Key | Applied value |
 |---|---|
 | `NvidiaReflex@` | `Enabled` |
 | `BloodLimit@` | `true` |
@@ -97,38 +97,38 @@ Les clés sont recherchées sous leur forme `NomDeCle@... = valeur`. La portion 
 | `SkipSeasonIntroVideo@` | `true` |
 | `SkipSeasonVideo@` | `true` |
 | `ViewedSplashScreen@` | `true` |
-| `RendererWorkerCount@` | `ceil(80 % des P-cores ou cœurs physiques), maximum cores - 1` |
+| `RendererWorkerCount@` | `ceil(80% of P-cores or physical cores), maximum cores - 1` |
 
-## Compiler depuis les sources
+## Build from source
 
-### Prérequis
+### Prerequisites
 
-- Go 1.26 ou plus récent ;
-- Windows pour l’exécution du patcher ;
-- [mise](https://mise.jdx.dev/) est recommandé pour l’outillage et les tâches locales.
+- Go 1.26 or newer;
+- Windows to run the patcher;
+- [mise](https://mise.jdx.dev/) is recommended for tooling and local tasks.
 
-### Compilation locale
+### Local build
 
 ```powershell
 go mod download
 go build -trimpath -ldflags="-s -w" -o cod-settings-patcher.exe .
 ```
 
-### Cross-compilation Windows AMD64
+### Windows AMD64 cross-compilation
 
-La tâche mise génère un exécutable Windows AMD64 sans CGO :
+The mise task builds a Windows AMD64 executable without CGO:
 
 ```bash
 mise run build-windows-amd64
 ```
 
-Le binaire est produit dans :
+The binary is produced at:
 
 ```text
 build/windows-amd64/cod-settings-patcher.exe
 ```
 
-## Vérifications qualité
+## Quality checks
 
 ```bash
 gofmt -w .
@@ -139,34 +139,34 @@ go test -race -count=1 ./...
 golangci-lint run --timeout=3m
 ```
 
-Pour contrôler explicitement la cible Windows sans exécuter le binaire :
+To explicitly check the Windows target without running the binary:
 
 ```bash
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go vet ./...
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/windows-amd64/cod-settings-patcher.exe .
 ```
 
-Le détecteur de race ne peut pas être exécuté lors d’une cross-compilation macOS/Linux vers Windows, car le binaire de test Windows ne peut pas être lancé sur l’hôte.
+The race detector cannot run during macOS/Linux-to-Windows cross-compilation because the Windows test binary cannot run on the host.
 
 ## Releases
 
-Un tag au format `vX.Y.Z` déclenche le workflow GitHub Actions de release. GoReleaser :
+A tag in the `vX.Y.Z` format triggers the GitHub Actions release workflow. GoReleaser:
 
-- compile `cod-settings-patcher.exe` pour `windows/amd64` avec `CGO_ENABLED=0` ;
-- crée une archive ZIP versionnée contenant le binaire et le README ;
-- génère `checksums.txt` en SHA-256 ;
-- publie ou met à jour la GitHub Release correspondante.
+- builds `cod-settings-patcher.exe` for `windows/amd64` with `CGO_ENABLED=0`;
+- creates a versioned ZIP archive containing the binary and README;
+- generates SHA-256 `checksums.txt`;
+- publishes or updates the matching GitHub Release.
 
-Exemple :
+Example:
 
 ```bash
 git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
 
-## Limites actuelles
+## Current limitations
 
-- L’outil ne cherche que les fichiers placés directement dans `players` ou `playersBeta`.
-- Tous les fichiers `.txt`, `.txt0` et `.txt1` trouvés dans ces dossiers sont analysés, mais seules les clés listées ci-dessus peuvent être modifiées.
-- Les règles sont compilées dans `settings.go` et ne sont pas encore configurables depuis un fichier externe.
-- SmartScreen peut avertir pour les binaires non signés ; utilisez uniquement les artefacts publiés dans les Releases officielles et vérifiez `checksums.txt`.
+- The tool only searches for files located directly in `players` or `playersBeta`.
+- Every `.txt`, `.txt0`, and `.txt1` file found in these directories is analyzed, but only the keys listed above can be modified.
+- Rules are compiled into `settings.go` and are not yet configurable from an external file.
+- SmartScreen may warn about unsigned binaries; only use artifacts published in the official Releases and verify `checksums.txt`.
