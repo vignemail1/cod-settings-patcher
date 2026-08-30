@@ -29,7 +29,7 @@ var desiredValues = map[string]string{
 	"DofWorldDisable@":                  "false",
 	"MotionBlur@":                       "Off",
 	"WeaponMotionBlur@":                 "Off",
-	"DepthOfField@":                     "false",
+	"DepthOfField@":                     "Off",
 	"DepthOfFieldQuality@":              "Low",
 	"DLSSPerfModeMP@":                   "Maximum Performance",
 	"StaticSunshadowClipmapResolution@": "0",
