@@ -1,12 +1,22 @@
 # Call of Duty Settings Patcher
 
-A Windows terminal tool for easily applying selected Call of Duty settings to your configuration files.
+A Windows terminal tool for easily applying selected Call of Duty settings to your configuration files. It DO NOT replace it/them, it patch it/them with correct values.
 
 The application detects your configurations, shows every change before it is applied, and automatically creates a backup of each modified file.
 
-## Download
+> ⚠️ This program INTENTIONNALY DOES NOT modify ⚠️ :
+> - Image scaling settings: since AMD and Nvidia cards have different capabilities, it is up to you to test what works best for you (DLSS Performance CNN 30% / Fidelity CAS 50% / DLSS Performance or Balanced Transformer 30%). Don't just copy what other tells you, test, really. Not everyone have the same (CPU, Motherboard, Graphic card, graphics drivers)
+> - Game resolution: some people want 1440p, while others can't and play at 1080p. There are even those playing in 4K.
+> - Mouse, keyboard, and controller settings: this program aims to get the most out of the game engine, not to alter the way you play.
 
-Download the latest Windows archive from the [Releases](../../releases) page, extract it to any folder, then run `cod-settings-patcher.exe`.
+These are simply the settings that all the "optimizers" recommend whenever a new *Call of Duty* comes out, as if they were some groundbreaking trick; they are always the same settings since before MW II (I have no reference before)
+
+## Short way
+
+- Download the latest Windows archive from the [Releases](../../releases) page,
+- extract it to any folder,
+- then run `cod-settings-patcher.exe` (Microsoft defender ScmartScreen may ask, click the link and validate),
+- answer the few question asks (which game installation to patch, confirmation to patch. Nothing more).
 
 ## Usage
 
