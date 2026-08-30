@@ -5,7 +5,7 @@ A Windows terminal tool for easily applying selected Call of Duty settings to yo
 The application detects your configurations, shows every change before it is applied, and automatically creates a backup of each modified file.
 
 > ⚠️ This program INTENTIONNALY DOES NOT modify ⚠️ :
-> - Image scaling settings: since AMD and Nvidia cards have different capabilities, it is up to you to test what works best for you (DLSS Performance CNN 30% / Fidelity CAS 50% / DLSS Performance or Balanced Transformer 30%). Don't just copy what other tells you, test, really. Not everyone have the same (CPU, Motherboard, Graphic card, graphics drivers)
+> - Image scaling settings: since AMD and Nvidia cards have different capabilities, it is up to you to test what works best for you (DLSS Performance CNN 30% / Fidelity CAS 50% / DLSS Performance or Balanced Transformer 30%). Don't just copy what other tells you, test, really. Not everyone have the same (CPU, Motherboard, Graphic card, graphics drivers). Some people may prefer image quality over performance/input lag reduction.
 > - Game resolution: some people want 1440p, while others can't and play at 1080p. There are even those playing in 4K.
 > - Mouse, keyboard, and controller settings: this program aims to get the most out of the game engine, not to alter the way you play.
 
@@ -17,6 +17,10 @@ These are simply the settings that all the "optimizers" recommend whenever a new
 - extract it to any folder,
 - then run `cod-settings-patcher.exe` (Microsoft defender ScmartScreen may ask, click the link and validate),
 - answer the few question asks (which game installation to patch, confirmation to patch. Nothing more).
+
+![Main screen](./cod-settings-patcher_mainscreen.png)
+
+![Patch preview](./cod-settings-patcher_preview_patch.png)
 
 ## Usage
 
